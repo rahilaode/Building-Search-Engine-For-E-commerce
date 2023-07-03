@@ -36,53 +36,40 @@ with col1:
 with col2:
     max_price = st.slider(label='Harga maksimal', min_value=151, max_value=300, value=200)
 
-query_price = f'price:[{min_price} TO {max_price}]'
+query_price = f'data_detail.price:[{min_price} TO {max_price}]'
 
-    # Configure connection and query parameters
-detail_products = search_function(core = solr_detail_product, 
-                                  query = query_price, 
-                                  rows = 1000000)
-
-    # Get product_index based on range of prices
-product_index_by_price = []
-for data in detail_products:
-    product_index_by_price.append(data['product_index'][0])
+    # Configure connection and query 
+homedepo_price = search_function(core = solr_homedepo, 
+                                 query = query_price, 
+                                 rows = 1000000)
 # -----------------------------------------------------Create 'Price' filter-----------------------------------------------END
 
-st.write('---')
+st.write('----')
 
 # -------------------------------------------------------If button clicked-------------------------------------------------START
 if button:
-    # If Input search filed
+    # If search filled
     if query:
         # Create subheader
         st.subheader('Hasil Pencarian : ' + query)
+                    # Configure connection and query parameters
+        homedepo_product = search_function(core = solr_homedepo, 
+                                           query = "data_detail.product_name:" + query, 
+                                           rows = 1000000)
 
-            # Configure connection and query parameters
-        homedepo = search_function(core = solr_homedepo, 
-                                   query = "title:" + query, 
-                                   rows = 1000000)
-
-
-            # Get product_index, title, and image_url from homedepo based on query and price range
-        product_index_by_query_and_price = []
-        title = []
+         #Get product_name, image_url, and price information fiter by query product_name and price
+        product_name = []
         image_url = []
-        for data in homedepo:
-            if data['product_index'][0] in product_index_by_price:
-                product_index_by_query_and_price.append(data['product_index'][0])
-                title.append(data['title'][0])
-                image_url.append(data['image_url'][0])
-        
-            # Get price data from detail_products
         price = []
-        for index in product_index_by_query_and_price:
-            for data in detail_products:
-                if data['product_index'][0] == index:
-                    price.append(data['price'][0])
         
+        for data in homedepo_product:
+            if data['data_detail.price'][0] > min_price and data['data_detail.price'][0] < max_price:
+                product_name.append(data['data_detail.product_name'])
+                image_url.append(data['image_url'])
+                price.append(data['data_detail.price'])
+
         #--------------------------------------Create contents--------------------------------------------START
-        if len(product_index_by_query_and_price) == 0:
+        if len(product_name) == 0:
             st.warning("Produk tidak ditemukan")
             
         else:
@@ -93,7 +80,7 @@ if button:
             for count, col in enumerate(cols, start = 0):
                 try:
                     col.image(image_url[count],
-                            caption = f'{price[count]} USD : {title[count][:30]} . . .', 
+                            caption = f'{price[count]} USD : {product_name[count][:30]} . . .', 
                             width = 150)
                 except IndexError:
                     break
@@ -101,7 +88,7 @@ if button:
             for count, col in enumerate(cols, start = 4):
                 try:
                     col.image(image_url[count],
-                            caption = f'{price[count]} USD : {title[count][:30]} . . .', 
+                            caption = f'{price[count]} USD : {product_name[count][:30]} . . .', 
                             width = 150)
                 except IndexError:
                     break
@@ -109,47 +96,33 @@ if button:
             for count, col in enumerate(cols, start = 8):
                 try:
                     col.image(image_url[count],
-                            caption = f'{price[count]} USD : {title[count][:30]} . . .', 
+                            caption = f'{price[count]} USD : {product_name[count][:30]} . . .', 
                             width = 150)
                 except IndexError:
                     break
         #--------------------------------------Create contents-------------------------------------END
-        
-    # If input search not filled
-    else:
-        st.warning('Silahkan masukkan pencarian')
-    
+
 # ------------------------------------------------------If button clicked--------------------------------------------------END        
     
-
-# If button not clicked
+    
+# ------------------------------------------------------If button NOT clicked--------------------------------------------------START        
 else:
     # Create subheader
     st.subheader('Produk')
-
-    homedepo = search_function(core = solr_homedepo, 
-                                query = "title:*", 
-                                rows = 1000000)
-
-        # Get product_index, title, and image_url from homedepo based on query and price range
-    product_index_by_query_and_price = []
-    title = []
+    
+    #Get product_name, image_url, and price information filter by price
+    product_name = []
     image_url = []
-    for data in homedepo:
-        if data['product_index'][0] in product_index_by_price:
-            product_index_by_query_and_price.append(data['product_index'][0])
-            title.append(data['title'][0])
-            image_url.append(data['image_url'][0])
-    
-        # Get price data from detail_products
     price = []
-    for index in product_index_by_query_and_price:
-        for data in detail_products:
-            if data['product_index'][0] == index:
-                price.append(data['price'][0])
     
+    for data in homedepo_price:
+        product_name.append(data['data_detail.product_name'][0])
+        image_url.append(data['image_url'][0])
+        price.append(data['data_detail.price'][0])
+
+
     #--------------------------------------Create contents--------------------------------------------START
-    if len(product_index_by_query_and_price) == 0:
+    if len(product_name) == 0:
         st.warning("Produk tidak ditemukan")
         
     else:
@@ -160,7 +133,7 @@ else:
         for count, col in enumerate(cols, start = 0):
             try:
                 col.image(image_url[count],
-                        caption = f'{price[count]} USD : {title[count][:30]} . . .', 
+                        caption = f'{price[count]} USD : {product_name[count][:30]} . . .', 
                         width = 150)
             except IndexError:
                 break
@@ -168,7 +141,7 @@ else:
         for count, col in enumerate(cols, start = 4):
             try:
                 col.image(image_url[count],
-                        caption = f'{price[count]} USD : {title[count][:30]} . . .', 
+                        caption = f'{price[count]} USD : {product_name[count][:30]} . . .', 
                         width = 150)
             except IndexError:
                 break
@@ -176,8 +149,10 @@ else:
         for count, col in enumerate(cols, start = 8):
             try:
                 col.image(image_url[count],
-                        caption = f'{price[count]} USD : {title[count][:30]} . . .', 
+                        caption = f'{price[count]} USD : {product_name[count][:30]} . . .', 
                         width = 150)
             except IndexError:
                 break
     #--------------------------------------Create contents-------------------------------------END
+
+# ------------------------------------------------------If button NOT clicked--------------------------------------------------END
